@@ -106,7 +106,7 @@ public class AuthService : IAuthService
             ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes),
             RefreshTokenExpiresAt = refreshToken.ExpiresAt,
             LoginSessionId = userLogin.Id,
-            Message = "Login successful"
+            Message = "Login successfully"
         };
     }
 
