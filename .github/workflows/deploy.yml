@@ -1,0 +1,229 @@
+# =============================================================================
+# DEPLOY WORKFLOW - CD Pipeline for Main Branch Deployment
+# =============================================================================
+# Triggers:
+#   - Push to main/master branch (after PR merge)
+# Purpose:
+#   - Build production artifacts
+#   - Create deployment package
+#   - Push to Octopus Deploy
+#   - Trigger deployment to IIS
+# =============================================================================
+
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'Production'
+        type: choice
+        options:
+          - Development
+          - Staging
+          - Production
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '18'
+  OCTOPUS_PROJECT_NAME: 'FirstTry'
+  OCTOPUS_CHANNEL: 'Default'
+  PACKAGE_ID: 'FirstTry.Web'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # ===========================================================================
+  # JOB: Build & Package
+  # ===========================================================================
+  build-and-package:
+    name: 🏗️ Build & Package
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      package_path: ${{ steps.package.outputs.package_path }}
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # -------------------------------------------------------------------------
+    # Version Generation
+    # -------------------------------------------------------------------------
+    - name: 🏷️ Generate Version
+      id: version
+      run: |
+        $date = Get-Date -Format "yyyy.MM.dd"
+        $runNumber = "${{ github.run_number }}"
+        $version = "$date.$runNumber"
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "📦 Package Version: $version"
+      shell: pwsh
+
+    # -------------------------------------------------------------------------
+    # Setup Build Environment
+    # -------------------------------------------------------------------------
+    - name: 🔧 Setup .NET ${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: Frontend/package-lock.json
+
+    # -------------------------------------------------------------------------
+    # Build Frontend (Angular)
+    # -------------------------------------------------------------------------
+    - name: 📦 Install Frontend Dependencies
+      working-directory: Frontend
+      run: npm ci
+
+    - name: 🎨 Build Frontend (Production)
+      working-directory: Frontend
+      run: npm run build -- --configuration=production --output-path=dist/browser
+
+    # -------------------------------------------------------------------------
+    # Build & Publish Backend (.NET)
+    # -------------------------------------------------------------------------
+    - name: 📥 Restore Backend Dependencies
+      working-directory: Backend
+      run: dotnet restore
+
+    - name: 🏗️ Publish Backend
+      working-directory: Backend
+      run: |
+        dotnet publish src/FirstTry.API/FirstTry.API.csproj `
+          --configuration Release `
+          --output ./publish `
+          --runtime win-x64 `
+          --self-contained false `
+          /p:Version=${{ steps.version.outputs.version }}
+      shell: pwsh
+
+    # -------------------------------------------------------------------------
+    # Combine Frontend & Backend
+    # -------------------------------------------------------------------------
+    - name: 📁 Copy Frontend to wwwroot
+      run: |
+        $publishPath = "Backend/publish/wwwroot"
+        if (!(Test-Path $publishPath)) {
+          New-Item -ItemType Directory -Force -Path $publishPath
+        }
+        Copy-Item -Path "Frontend/dist/browser/*" -Destination $publishPath -Recurse -Force
+        echo "✅ Frontend files copied to wwwroot"
+      shell: pwsh
+
+    # -------------------------------------------------------------------------
+    # Create Deployment Package
+    # -------------------------------------------------------------------------
+    - name: 📦 Create Deployment Package
+      id: package
+      run: |
+        $packageName = "${{ env.PACKAGE_ID }}.${{ steps.version.outputs.version }}.zip"
+        $packagePath = "${{ github.workspace }}/$packageName"
+        
+        Compress-Archive -Path "Backend/publish/*" -DestinationPath $packagePath -Force
+        
+        echo "package_path=$packagePath" >> $env:GITHUB_OUTPUT
+        echo "package_name=$packageName" >> $env:GITHUB_OUTPUT
+        echo "📦 Package created: $packageName"
+      shell: pwsh
+
+    - name: 📤 Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-package
+        path: ${{ env.PACKAGE_ID }}.${{ steps.version.outputs.version }}.zip
+        retention-days: 30
+
+  # ===========================================================================
+  # JOB: Push to Octopus Deploy
+  # ===========================================================================
+  push-to-octopus:
+    name: 🐙 Push to Octopus Deploy
+    runs-on: windows-latest
+    needs: build-and-package
+    environment: Production
+
+    steps:
+    - name: 📥 Download Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-package
+        path: ./artifacts
+
+    - name: 🔧 Install Octopus CLI
+      run: |
+        dotnet tool install --global Octopus.DotNet.Cli
+        echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+      shell: pwsh
+
+    - name: 📤 Push Package to Octopus
+      run: |
+        dotnet octo push `
+          --package "./artifacts/${{ env.PACKAGE_ID }}.${{ needs.build-and-package.outputs.version }}.zip" `
+          --server "${{ secrets.OCTOPUS_SERVER_URL }}" `
+          --apiKey "${{ secrets.OCTOPUS_API_KEY }}" `
+          --space "${{ secrets.OCTOPUS_SPACE }}"
+      shell: pwsh
+
+    - name: 🚀 Create Octopus Release
+      run: |
+        dotnet octo create-release `
+          --project "${{ env.OCTOPUS_PROJECT_NAME }}" `
+          --version "${{ needs.build-and-package.outputs.version }}" `
+          --channel "${{ env.OCTOPUS_CHANNEL }}" `
+          --server "${{ secrets.OCTOPUS_SERVER_URL }}" `
+          --apiKey "${{ secrets.OCTOPUS_API_KEY }}" `
+          --space "${{ secrets.OCTOPUS_SPACE }}" `
+          --packageVersion "${{ needs.build-and-package.outputs.version }}"
+      shell: pwsh
+
+    - name: 🎯 Deploy Release
+      run: |
+        dotnet octo deploy-release `
+          --project "${{ env.OCTOPUS_PROJECT_NAME }}" `
+          --version "${{ needs.build-and-package.outputs.version }}" `
+          --deployTo "${{ github.event.inputs.environment || 'Production' }}" `
+          --server "${{ secrets.OCTOPUS_SERVER_URL }}" `
+          --apiKey "${{ secrets.OCTOPUS_API_KEY }}" `
+          --space "${{ secrets.OCTOPUS_SPACE }}" `
+          --waitForDeployment `
+          --deploymentTimeout "00:30:00"
+      shell: pwsh
+
+  # ===========================================================================
+  # JOB: Deployment Summary
+  # ===========================================================================
+  deployment-summary:
+    name: 📝 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-package, push-to-octopus]
+    if: always()
+
+    steps:
+    - name: 📝 Generate Summary
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Version | ${{ needs.build-and-package.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Environment | ${{ github.event.inputs.environment || 'Production' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Build Status | ${{ needs.build-and-package.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Deployment Status | ${{ needs.push-to-octopus.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Triggered By | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+
