@@ -1,0 +1,156 @@
+<div class="institution-container">
+  <div class="institution-card">
+    <div class="institution-header">
+      <h1>Create Institution</h1>
+      <p>Set up a new institution with at least one user</p>
+    </div>
+
+    <form [formGroup]="institutionForm" (ngSubmit)="onSubmit()" class="institution-form">
+      @if (errorMessage) {
+        <div class="error-alert">{{ errorMessage }}</div>
+      }
+      @if (successMessage) {
+        <div class="success-alert">{{ successMessage }}</div>
+      }
+
+      <div class="section-title">Institution Details</div>
+
+      <div class="form-group">
+        <label for="name">Institution Name *</label>
+        <input type="text" id="name" formControlName="name" placeholder="Enter institution name"
+               [class.invalid]="name?.invalid && name?.touched">
+        @if (name?.invalid && name?.touched) {
+          <div class="error-message">
+            @if (name?.errors?.['required']) { Institution name is required }
+            @else if (name?.errors?.['minlength']) { Name must be at least 2 characters }
+            @else if (name?.errors?.['maxlength']) { Name cannot exceed 200 characters }
+          </div>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="universalId">Universal ID *</label>
+          <input type="text" id="universalId" formControlName="universalId" placeholder="Enter universal ID"
+                 [class.invalid]="universalId?.invalid && universalId?.touched">
+          @if (universalId?.invalid && universalId?.touched) {
+            <div class="error-message">
+              @if (universalId?.errors?.['required']) { Universal ID is required }
+              @else if (universalId?.errors?.['minlength']) { Must be at least 2 characters }
+            </div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="email">Institution Email *</label>
+          <input type="email" id="email" formControlName="email" placeholder="Enter institution email"
+                 [class.invalid]="email?.invalid && email?.touched">
+          @if (email?.invalid && email?.touched) {
+            <div class="error-message">
+              @if (email?.errors?.['required']) { Email is required }
+              @else if (email?.errors?.['email']) { Please enter a valid email }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" formControlName="description" placeholder="Enter description (optional)" rows="3"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="address">Address</label>
+          <input type="text" id="address" formControlName="address" placeholder="Enter address (optional)">
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="text" id="phone" formControlName="phone" placeholder="Enter phone (optional)">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="website">Website</label>
+        <input type="text" id="website" formControlName="website" placeholder="Enter website (optional)">
+      </div>
+
+      <div class="section-title users-section-title">
+        <span>Users (At least one required)</span>
+        <button type="button" class="btn-add-user" (click)="addUser()">+ Add User</button>
+      </div>
+
+      <div formArrayName="users">
+        @for (user of users.controls; track $index; let i = $index) {
+          <div class="user-card" [formGroupName]="i">
+            <div class="user-card-header">
+              <span>User {{ i + 1 }}</span>
+              @if (users.length > 1) {
+                <button type="button" class="btn-remove-user" (click)="removeUser(i)">Remove</button>
+              }
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>First Name *</label>
+                <input type="text" formControlName="firstName" placeholder="First name"
+                       [class.invalid]="getUserControl(i, 'firstName')?.invalid && getUserControl(i, 'firstName')?.touched">
+                @if (getUserControl(i, 'firstName')?.invalid && getUserControl(i, 'firstName')?.touched) {
+                  <div class="error-message">First name is required</div>
+                }
+              </div>
+              <div class="form-group">
+                <label>Last Name *</label>
+                <input type="text" formControlName="lastName" placeholder="Last name"
+                       [class.invalid]="getUserControl(i, 'lastName')?.invalid && getUserControl(i, 'lastName')?.touched">
+                @if (getUserControl(i, 'lastName')?.invalid && getUserControl(i, 'lastName')?.touched) {
+                  <div class="error-message">Last name is required</div>
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email *</label>
+                <input type="email" formControlName="email" placeholder="User email"
+                       [class.invalid]="getUserControl(i, 'email')?.invalid && getUserControl(i, 'email')?.touched">
+                @if (getUserControl(i, 'email')?.invalid && getUserControl(i, 'email')?.touched) {
+                  <div class="error-message">
+                    @if (getUserControl(i, 'email')?.errors?.['required']) { Email is required }
+                    @else if (getUserControl(i, 'email')?.errors?.['email']) { Please enter a valid email }
+                  </div>
+                }
+              </div>
+              <div class="form-group">
+                <label>Password *</label>
+                <input type="password" formControlName="password" placeholder="Password"
+                       [class.invalid]="getUserControl(i, 'password')?.invalid && getUserControl(i, 'password')?.touched">
+                @if (getUserControl(i, 'password')?.invalid && getUserControl(i, 'password')?.touched) {
+                  <div class="error-message">
+                    @if (getUserControl(i, 'password')?.errors?.['required']) { Password is required }
+                    @else if (getUserControl(i, 'password')?.errors?.['minlength']) { Password must be at least 6 characters }
+                    @else if (getUserControl(i, 'password')?.errors?.['passwordStrength']) { Password must contain uppercase, lowercase, and number }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="isLoading">
+        @if (isLoading) {
+          <span class="spinner"></span>
+          Creating...
+        } @else {
+          Create Institution
+        }
+      </button>
+    </form>
+
+    <div class="institution-footer">
+      <p><a routerLink="/dashboard">← Back to Dashboard</a></p>
+    </div>
+  </div>
+</div>
+
