@@ -1,5 +1,5 @@
-import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -17,14 +17,21 @@ export class LoginComponent {
   private router = inject(Router);
 
   loginForm: FormGroup;
+  resetPasswordForm: FormGroup;
   isLoading = false;
   errorMessage = '';
-  step: 'email' | 'password' = 'email';
+  successMessage = '';
+  step: 'email' | 'password' | 'reset-password' = 'email';
 
   constructor() {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
+    });
+
+    this.resetPasswordForm = this.fb.group({
+      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
@@ -72,12 +79,79 @@ export class LoginComponent {
     });
   }
 
+  onResetPassword(): void {
+    this.step = 'reset-password';
+    this.errorMessage = '';
+    this.successMessage = '';
+  }
+
+  onBackToLogin(): void {
+    this.step = 'password';
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.resetPasswordForm.reset();
+  }
+
+  onSubmitResetPassword(): void {
+    if (this.resetPasswordForm.invalid) {
+      this.resetPasswordForm.markAllAsTouched();
+      return;
+    }
+
+    const newPassword = this.resetPasswordForm.get('newPassword')?.value;
+    const confirmPassword = this.resetPasswordForm.get('confirmPassword')?.value;
+
+    if (newPassword !== confirmPassword) {
+      this.errorMessage = 'Passwords do not match';
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    const resetRequest = {
+      email: this.email?.value,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword
+    };
+
+    this.authService.resetPassword(resetRequest).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        if (response.success) {
+          this.successMessage = response.message || 'Password reset successfully! You can now login with your new password.';
+          this.resetPasswordForm.reset();
+          // Optionally redirect to login after a delay
+          setTimeout(() => {
+            this.step = 'password';
+            this.successMessage = '';
+          }, 3000);
+        } else {
+          this.errorMessage = response.message || 'Password reset failed';
+        }
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.errorMessage = error.error?.message || 'An error occurred during password reset';
+      }
+    });
+  }
+
   get email() {
     return this.loginForm.get('email');
   }
 
   get password() {
     return this.loginForm.get('password');
+  }
+
+  get newPassword() {
+    return this.resetPasswordForm.get('newPassword');
+  }
+
+  get confirmPassword() {
+    return this.resetPasswordForm.get('confirmPassword');
   }
 }
 
