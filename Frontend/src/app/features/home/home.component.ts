@@ -1,10 +1,10 @@
-import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { ChildApplicationService } from '../../core/services/child-application.service';
-import { AuthService } from '../../core/services/auth.service';
-import { ChildApplication } from '../../core/models/child-application.model';
 import { User } from '../../core/models/auth.model';
+import { ChildApplication } from '../../core/models/child-application.model';
+import { AuthService } from '../../core/services/auth.service';
+import { ChildApplicationService } from '../../core/services/child-application.service';
 
 @Component({
   selector: 'app-home',
@@ -33,6 +33,14 @@ export class HomeComponent implements OnInit {
     this.loadApplications();
   }
 
+  isPenguinAdmin(): boolean {
+    return this.currentUser?.roles?.includes('PenguinAdmin') || false;
+  }
+
+  isInstitutionUser(): boolean {
+    return this.currentUser?.roles?.includes('User') || false;
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
@@ -47,6 +55,9 @@ export class HomeComponent implements OnInit {
 
   setActiveMenu(menu: 'home' | 'admin'): void {
     this.activeMenu = menu;
+    if (menu === 'admin') {
+      this.router.navigate(['/penguin-admin']);
+    }
   }
 
   loadApplications(): void {

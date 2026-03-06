@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FirstTry.Application.Features.Institution.Commands;
 using FirstTry.Application.Features.Institution.DTOs;
 using FirstTry.Application.Features.Institution.Queries;
@@ -40,6 +41,24 @@ public class InstitutionController : ControllerBase
     public async Task<ActionResult<InstitutionResponseDto>> GetById(Guid id)
     {
         var result = await _mediator.Send(new GetInstitutionByIdQuery { Id = id });
+        if (!result.Success)
+        {
+            return NotFound(result);
+        }
+        return Ok(result);
+    }
+
+    [HttpGet("my-institution")]
+    [Authorize]
+    public async Task<ActionResult<InstitutionResponseDto>> GetMyInstitution()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _mediator.Send(new GetMyInstitutionQuery { UserId = userId });
         if (!result.Success)
         {
             return NotFound(result);
