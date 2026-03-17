@@ -143,6 +143,30 @@ public class InstitutionService : IInstitutionService
         };
     }
 
+    public async Task<InstitutionResponseDto> GetMyInstitutionAsync(string userId)
+    {
+        var user = await _context.Users
+            .Include(u => u.Institution)
+                .ThenInclude(i => i!.Users)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return new InstitutionResponseDto { Success = false, Message = "User not found" };
+        }
+
+        if (user.InstitutionId == null || user.Institution == null)
+        {
+            return new InstitutionResponseDto { Success = false, Message = "User is not associated with any institution" };
+        }
+
+        return new InstitutionResponseDto
+        {
+            Success = true,
+            Institution = MapToDto(user.Institution)
+        };
+    }
+
     public async Task<InstitutionListResponseDto> GetAllInstitutionsAsync()
     {
         var institutions = await _context.Institutions

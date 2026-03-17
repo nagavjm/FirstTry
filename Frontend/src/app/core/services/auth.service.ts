@@ -1,8 +1,8 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
-import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
+import { AuthResponse, LoginRequest, RegisterRequest, ResetPasswordRequest, User } from '../models/auth.model';
 
 @Injectable({
   providedIn: 'root'
@@ -46,6 +46,10 @@ export class AuthService {
           }
         })
       );
+  }
+
+  resetPassword(request: ResetPasswordRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/reset-password`, request);
   }
 
   private handleAuthSuccess(response: AuthResponse): void {

@@ -366,6 +366,47 @@ public class AuthService : IAuthService
         return loginHistory;
     }
 
+    public async Task<AuthResponseDto> ResetPasswordAsync(ResetPasswordRequestDto request, CancellationToken cancellationToken = default)
+    {
+        // Validate passwords match
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            return new AuthResponseDto { Success = false, Message = "Passwords do not match" };
+        }
+
+        // Find user by email
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+        {
+            return new AuthResponseDto { Success = false, Message = "User not found" };
+        }
+
+        if (!user.IsActive)
+        {
+            return new AuthResponseDto { Success = false, Message = "Account is deactivated" };
+        }
+
+        // Remove old password and set new password
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return new AuthResponseDto { Success = false, Message = errors };
+        }
+
+        // Reset failed login attempts
+        user.FailedLoginAttempts = 0;
+        await _userManager.UpdateAsync(user);
+
+        return new AuthResponseDto
+        {
+            Success = true,
+            Message = "Password reset successfully"
+        };
+    }
+
     public Task<string> GenerateJwtTokenAsync(string userId, string email, IList<string> roles)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));

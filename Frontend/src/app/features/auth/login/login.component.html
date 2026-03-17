@@ -7,80 +7,153 @@
 
     <form [formGroup]="loginForm" class="login-form">
       @if (errorMessage) {
-        <div class="error-alert">
-          {{ errorMessage }}
-        </div>
+      <div class="error-alert">
+        {{ errorMessage }}
+      </div>
       }
 
       <!-- Step 1: Email -->
       @if (step === 'email') {
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            formControlName="email"
-            placeholder="Enter your email"
-            [class.invalid]="email?.invalid && email?.touched"
-            (keydown.enter)="onNext(); $event.preventDefault()"
-          />
-          @if (email?.invalid && email?.touched) {
-            <div class="error-message">
-              @if (email?.errors?.['required']) {
-                <span>Email is required</span>
-              }
-              @if (email?.errors?.['email']) {
-                <span>Please enter a valid email</span>
-              }
-            </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" formControlName="email" placeholder="Enter your email"
+          [class.invalid]="email?.invalid && email?.touched" (keydown.enter)="onNext(); $event.preventDefault()" />
+        @if (email?.invalid && email?.touched) {
+        <div class="error-message">
+          @if (email?.errors?.['required']) {
+          <span>Email is required</span>
+          }
+          @if (email?.errors?.['email']) {
+          <span>Please enter a valid email</span>
           }
         </div>
+        }
+      </div>
 
-        <button type="button" class="btn-login" (click)="onNext()">
-          Next
-        </button>
+      <button type="button" class="btn-login" (click)="onNext()">
+        Next
+      </button>
       }
 
       <!-- Step 2: Password -->
       @if (step === 'password') {
-        <div class="email-display">
-          <span class="email-label">Email:</span>
-          <span class="email-value">{{ email?.value }}</span>
-          <button type="button" class="btn-change" (click)="onBack()">Change</button>
-        </div>
+      <div class="email-display">
+        <span class="email-label">Email:</span>
+        <span class="email-value">{{ email?.value }}</span>
+        <button type="button" class="btn-change" (click)="onBack()">Change</button>
+      </div>
 
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            formControlName="password"
-            placeholder="Enter your password"
-            [class.invalid]="password?.invalid && password?.touched"
-            (keydown.enter)="onSubmit(); $event.preventDefault()"
-          />
-          @if (password?.invalid && password?.touched) {
-            <div class="error-message">
-              @if (password?.errors?.['required']) {
-                <span>Password is required</span>
-              }
-              @if (password?.errors?.['minlength']) {
-                <span>Password must be at least 6 characters</span>
-              }
-            </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" formControlName="password" placeholder="Enter your password"
+          [class.invalid]="password?.invalid && password?.touched"
+          (keydown.enter)="onSubmit(); $event.preventDefault()" />
+        @if (password?.invalid && password?.touched) {
+        <div class="error-message">
+          @if (password?.errors?.['required']) {
+          <span>Password is required</span>
+          }
+          @if (password?.errors?.['minlength']) {
+          <span>Password must be at least 6 characters</span>
           }
         </div>
+        }
+      </div>
 
-        <button type="button" class="btn-login" [disabled]="isLoading" (click)="onSubmit()">
-          @if (isLoading) {
-            <span class="spinner"></span>
-            Signing in...
-          } @else {
-            Sign In
-          }
+      <button type="button" class="btn-login" [disabled]="isLoading" (click)="onSubmit()">
+        @if (isLoading) {
+        <span class="spinner"></span>
+        Signing in...
+        } @else {
+        Sign In
+        }
+      </button>
+
+      <div class="reset-password-link">
+        <button type="button" class="btn-link" (click)="onResetPassword()">
+          Reset Password
         </button>
+      </div>
+      }
+
+      <!-- Step 3: Reset Password -->
+      @if (step === 'reset-password') {
+      <div class="email-display">
+        <span class="email-label">Email:</span>
+        <span class="email-value">{{ email?.value }}</span>
+        <button type="button" class="btn-change" (click)="onBack()">Change</button>
+      </div>
+
+      @if (successMessage) {
+      <div class="success-alert">
+        {{ successMessage }}
+      </div>
+      }
+
+      <div class="form-group">
+        <label for="newPassword">New Password</label>
+        <input type="password" id="newPassword" [formControl]="$any(newPassword)" placeholder="Enter new password"
+          [class.invalid]="newPassword?.invalid && newPassword?.touched" />
+        @if (newPassword?.invalid && newPassword?.touched) {
+        <div class="error-message">
+          @if (newPassword?.errors?.['required']) {
+          <span>New password is required</span>
+          }
+          @if (newPassword?.errors?.['minlength']) {
+          <span>Password must be at least 6 characters</span>
+          }
+          @if (newPassword?.errors?.['passwordStrength']) {
+          <div>
+            <span>Password must contain:</span>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              @if (!newPassword?.errors?.['passwordStrength'].hasUpperCase) {
+              <li>At least one uppercase letter</li>
+              }
+              @if (!newPassword?.errors?.['passwordStrength'].hasLowerCase) {
+              <li>At least one lowercase letter</li>
+              }
+              @if (!newPassword?.errors?.['passwordStrength'].hasNumeric) {
+              <li>At least one number</li>
+              }
+            </ul>
+          </div>
+          }
+        </div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input type="password" id="confirmPassword" [formControl]="$any(confirmPassword)"
+          placeholder="Confirm new password" [class.invalid]="confirmPassword?.invalid && confirmPassword?.touched"
+          (keydown.enter)="onSubmitResetPassword(); $event.preventDefault()" />
+        @if (confirmPassword?.invalid && confirmPassword?.touched) {
+        <div class="error-message">
+          @if (confirmPassword?.errors?.['required']) {
+          <span>Confirm password is required</span>
+          }
+          @if (confirmPassword?.errors?.['minlength']) {
+          <span>Password must be at least 6 characters</span>
+          }
+        </div>
+        }
+      </div>
+
+      <button type="button" class="btn-login" [disabled]="isLoading" (click)="onSubmitResetPassword()">
+        @if (isLoading) {
+        <span class="spinner"></span>
+        Resetting...
+        } @else {
+        Reset Password
+        }
+      </button>
+
+      <div class="reset-password-link">
+        <button type="button" class="btn-link" (click)="onBackToLogin()">
+          Back to Login
+        </button>
+      </div>
       }
     </form>
   </div>
 </div>
-

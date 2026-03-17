@@ -1,12 +1,12 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  CreateInstitutionRequest,
-  InstitutionResponse,
-  InstitutionListResponse,
   AddUserToInstitutionRequest,
+  CreateInstitutionRequest,
+  InstitutionListResponse,
+  InstitutionResponse,
   UpdateInstitutionRequest,
   UpdateInstitutionUserRequest,
   UserResponse
@@ -29,6 +29,10 @@ export class InstitutionService {
 
   getInstitutionById(id: string): Observable<InstitutionResponse> {
     return this.http.get<InstitutionResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  getMyInstitution(): Observable<InstitutionResponse> {
+    return this.http.get<InstitutionResponse>(`${this.apiUrl}/my-institution`);
   }
 
   searchInstitutions(keyword: string): Observable<InstitutionListResponse> {

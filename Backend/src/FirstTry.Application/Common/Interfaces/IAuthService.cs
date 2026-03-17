@@ -7,6 +7,7 @@ public interface IAuthService
     Task<AuthResponseDto> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default);
     Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken = default);
     Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request, CancellationToken cancellationToken = default);
+    Task<AuthResponseDto> ResetPasswordAsync(ResetPasswordRequestDto request, CancellationToken cancellationToken = default);
     Task<bool> LogoutAsync(string userId, string? token = null, CancellationToken cancellationToken = default);
     Task<bool> RevokeTokenAsync(string token, string? reason = null, CancellationToken cancellationToken = default);
     Task<UserDto?> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default);

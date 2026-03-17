@@ -6,6 +6,7 @@ public interface IInstitutionService
 {
     Task<InstitutionResponseDto> CreateInstitutionAsync(CreateInstitutionRequestDto request);
     Task<InstitutionResponseDto> GetInstitutionByIdAsync(Guid id);
+    Task<InstitutionResponseDto> GetMyInstitutionAsync(string userId);
     Task<InstitutionListResponseDto> GetAllInstitutionsAsync();
     Task<InstitutionListResponseDto> SearchInstitutionsAsync(string keyword);
     Task<InstitutionResponseDto> UpdateInstitutionAsync(Guid id, UpdateInstitutionRequestDto request);
