@@ -102,6 +102,22 @@
           @if (newPassword?.errors?.['minlength']) {
           <span>Password must be at least 6 characters</span>
           }
+          @if (newPassword?.errors?.['passwordStrength']) {
+          <div>
+            <span>Password must contain:</span>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              @if (!newPassword?.errors?.['passwordStrength'].hasUpperCase) {
+              <li>At least one uppercase letter</li>
+              }
+              @if (!newPassword?.errors?.['passwordStrength'].hasLowerCase) {
+              <li>At least one lowercase letter</li>
+              }
+              @if (!newPassword?.errors?.['passwordStrength'].hasNumeric) {
+              <li>At least one number</li>
+              }
+            </ul>
+          </div>
+          }
         </div>
         }
       </div>

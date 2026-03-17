@@ -1,3 +1,4 @@
+using FirstTry.API.Middleware;
 using FirstTry.Application;
 using FirstTry.Infrastructure;
 using FirstTry.Infrastructure.Persistence;
@@ -35,6 +36,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
 app.UseAuthentication();
